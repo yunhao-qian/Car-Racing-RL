@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "car-racing-rl"
+version = "0.1.0"
+dependencies = []
+requires-python = ">= 3.13"
+authors = [{ name = "Yunhao Qian", email = "yunhaoqian@hotmail.com" }]
+description = "Training a reinforcement learning agent to drive in the CarRacing environment from Gymnasium."
+readme = "README.md"
+
+[project.scripts]
+
+[project.urls]
+Repository = "https://github.com/yunhao-qian/ESE-6500-Final-Project"
