@@ -1,12 +1,12 @@
 from pathlib import Path
 
-import pygame
 import fire
+import pygame
 import torch
 
 from .actor_critic import ActorCritic
-from .ppo import train_ppo_cli
 from .car_racing import CarRacing
+from .ppo import train_ppo_cli
 
 
 def main() -> None:
