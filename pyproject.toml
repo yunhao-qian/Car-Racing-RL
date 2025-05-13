@@ -11,8 +11,5 @@ authors = [{ name = "Yunhao Qian", email = "yunhaoqian@hotmail.com" }]
 description = "Training a reinforcement learning agent to drive in the CarRacing environment from Gymnasium."
 readme = "README.md"
 
-[project.scripts]
-car-racing = "car_racing_rl.cli:main"
-
 [project.urls]
 Repository = "https://github.com/yunhao-qian/ESE-6500-Final-Project"
