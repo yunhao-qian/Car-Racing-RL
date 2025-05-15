@@ -299,9 +299,11 @@ class PPO(Configurable[PPOConfig]):
         }
 
     def _log_config_and_stats(
-        self, writer: SummaryWriter, stats: dict[str, np.ndarray], epoch: int
+        self,
+        writer: SummaryWriter,
+        stats: dict[str, list[float] | list[np.ndarray]],
+        epoch: int,
     ) -> None:
-
         for tag in (
             "learning_rate",
             "policy_loss_weight",
@@ -327,7 +329,6 @@ class PPO(Configurable[PPOConfig]):
                     | "episode/return"
                     | "episode/length"
                     | "ratio/ratio"
-                    | "grad_norm"
                 ):
                     writer.add_scalar(f"{tag}/mean", stat_array.mean(), epoch)
                     writer.add_scalar(f"{tag}/std", stat_array.std(), epoch)
@@ -437,7 +438,6 @@ class _PPOBuffer:
         self._path_start_index = self._index
 
     def get(self, batch_size: int, device: torch.device) -> Iterator[Batch]:
-
         assert self._index == self._size, "Buffer is not full"
         self._index = 0
         self._path_start_index = 0
@@ -476,7 +476,6 @@ class _PPOBuffer:
 
     @staticmethod
     def _discounted_cumsum(x: np.ndarray, discount: float) -> np.ndarray:
-
         b = np.array([1.0], dtype=x.dtype)
         a = np.array([1.0, -discount], dtype=x.dtype)
 

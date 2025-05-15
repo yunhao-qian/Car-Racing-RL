@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
+from pathlib import Path
 from typing import Literal, NamedTuple, TypedDict, Unpack, override
 
 import numpy as np
@@ -158,7 +160,12 @@ class ActorCritic(nn.Module, Configurable[ActorCriticConfig]):
         values: torch.Tensor = self.value_head(latents).squeeze(dim=1)
         return self.Output(action_distribution, values)
 
-    def step(self, observation: np.ndarray, action_history: np.ndarray | None) -> Step:
+    def step(
+        self,
+        observation: np.ndarray,
+        action_history: np.ndarray | None,
+        deterministic: bool = False,
+    ) -> Step:
         # observation: (frame_stack_size, height, width)
         # action_history: (action_stack_size, action_dim)
 
@@ -177,7 +184,7 @@ class ActorCritic(nn.Module, Configurable[ActorCriticConfig]):
             # (1, latent_features)
             latents = torch.cat((latents, action_history), dim=1)
 
-        action_head_step = self.action_head.step(latents)
+        action_head_step = self.action_head.step(latents, deterministic=deterministic)
         # (1,)
         value: torch.Tensor = self.value_head(latents)
         return self.Step(
@@ -200,6 +207,28 @@ class ActorCritic(nn.Module, Configurable[ActorCriticConfig]):
     def unfreeze_weights(self) -> None:
         for param in self.parameters():
             param.requires_grad_(True)
+
+    def load_weights(
+        self, checkpoint_dir: Path, skipped_weights: Sequence[str] = ()
+    ) -> None:
+        state_dict = torch.load(
+            checkpoint_dir / "actor_critic.pth", map_location=self.device
+        )
+        skipped_names: list[str] = []
+        for name in tuple(state_dict.keys()):
+            if any(
+                map(
+                    lambda pattern: name == pattern or name.startswith(f"{pattern}."),
+                    skipped_weights,
+                )
+            ):
+                skipped_names.append(name)
+                del state_dict[name]
+        if len(skipped_names) > 0:
+            print(f"Skipped weights: {', '.join(skipped_names)}")
+            self.load_state_dict(state_dict, strict=False)
+        else:
+            self.load_state_dict(state_dict)
 
     @staticmethod
     @override
@@ -248,7 +277,7 @@ class ActionHeadBase(nn.Module, ABC):
     def action_event_dtype(self) -> np.dtype: ...
 
     @abstractmethod
-    def step(self, latents: torch.Tensor) -> Step: ...
+    def step(self, latents: torch.Tensor, deterministic: bool = False) -> Step: ...
 
 
 class ActionHeadCategorical(ActionHeadBase):
@@ -285,12 +314,17 @@ class ActionHeadCategorical(ActionHeadBase):
         return np.int64
 
     @override
-    def step(self, latents: torch.Tensor) -> ActionHeadBase.Step:
+    def step(
+        self, latents: torch.Tensor, deterministic: bool = False
+    ) -> ActionHeadBase.Step:
         # latents: (1, latent_features)
 
         action_distribution: Categorical = self(latents)
         # (1,)
-        action_event = action_distribution.sample()
+        if not deterministic:
+            action_event = action_distribution.sample()
+        else:
+            action_event = action_distribution.probs.argmax(dim=-1)
         action_log_prob = action_distribution.log_prob(action_event)
 
         # Scalar
@@ -338,12 +372,17 @@ class ActionHeadDirichlet(ActionHeadBase):
         return np.float32
 
     @override
-    def step(self, latents: torch.Tensor) -> ActionHeadBase.Step:
+    def step(
+        self, latents: torch.Tensor, deterministic: bool = False
+    ) -> ActionHeadBase.Step:
         # latents: (1, latent_features)
 
         action_distribution: Dirichlet = self(latents)
         # (1, n_discrete_actions)
-        action_event = action_distribution.sample()
+        if not deterministic:
+            action_event = action_distribution.sample()
+        else:
+            action_event = action_distribution.mean
         # (1,)
         action_log_prob = action_distribution.log_prob(action_event)
 
@@ -395,12 +434,17 @@ class ActionHeadMultiCategorical(ActionHeadBase):
         return np.int64
 
     @override
-    def step(self, latents: torch.Tensor) -> ActionHeadBase.Step:
+    def step(
+        self, latents: torch.Tensor, deterministic: bool = False
+    ) -> ActionHeadBase.Step:
         # latents: (1, latent_features)
 
         action_distribution: Categorical = self(latents)
         # (1, action_dim)
-        action_event = action_distribution.sample()
+        if not deterministic:
+            action_event = action_distribution.sample()
+        else:
+            action_event = action_distribution.probs.argmax(dim=-1)
         # (1, action_dim)
         action_log_prob = action_distribution.log_prob(action_event)
 
@@ -450,12 +494,17 @@ class ActionHeadNormal(ActionHeadBase):
         return np.float32
 
     @override
-    def step(self, latents: torch.Tensor) -> ActionHeadBase.Step:
+    def step(
+        self, latents: torch.Tensor, deterministic: bool = False
+    ) -> ActionHeadBase.Step:
         # latents: (1, latent_features)
 
         action_distribution: Normal = self(latents)
         # (1, action_dim)
-        action_event = action_distribution.sample()
+        if not deterministic:
+            action_event = action_distribution.sample()
+        else:
+            action_event = action_distribution.mean
         # (1, action_dim)
         action_log_prob = action_distribution.log_prob(action_event)
 
@@ -521,12 +570,26 @@ class ActionHeadNormalTanh(ActionHeadBase):
         return np.float32
 
     @override
-    def step(self, latents: torch.Tensor) -> ActionHeadBase.Step:
+    def step(
+        self, latents: torch.Tensor, deterministic: bool = False
+    ) -> ActionHeadBase.Step:
         # latents: (1, latent_features)
 
         action_distribution: TransformedDistribution = self(latents)
         # (1, action_dim)
-        action_event = action_distribution.sample()
+        if not deterministic:
+            action_event = action_distribution.sample()
+        else:
+            action_event = action_distribution.base_dist.mean
+            action_event = (
+                torch.tensor(
+                    [-1.0, 0.0, 0.0], dtype=torch.float32, device=latents.device
+                )
+                + torch.tensor(
+                    [2.0, 1.0, 1.0], dtype=torch.float32, device=latents.device
+                )
+                * action_event.tanh()
+            )
         # (1, action_dim)
         action_log_prob = action_distribution.log_prob(action_event)
 
