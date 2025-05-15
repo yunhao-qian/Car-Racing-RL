@@ -13,6 +13,8 @@ class EnvConfig(TypedDict, total=False):
     max_episode_steps: int
     render_mode: Literal["rgb_array", "human", None]
     domain_randomize: bool
+    fixed_view: bool
+    show_trajectory: bool
     action_interval: int
     frame_stack_size: int
     action_stack_size: int
@@ -46,6 +48,8 @@ class Env(Configurable[EnvConfig]):
             env_spec,
             render_mode=self._config["render_mode"],
             domain_randomize=self._config["domain_randomize"],
+            fixed_view=self._config["fixed_view"],
+            show_trajectory=self._config["show_trajectory"],
         )
         self._frame_stack: list[np.ndarray] = []
         self._action_stack: list[np.ndarray] = []
@@ -120,6 +124,8 @@ class Env(Configurable[EnvConfig]):
             "reward_threshold": 900.0,
             "max_episode_steps": 1000,
             "domain_randomize": False,
+            "fixed_view": False,
+            "show_trajectory": False,
             "action_interval": 8,
             "frame_stack_size": 4,
             "action_stack_size": 0,

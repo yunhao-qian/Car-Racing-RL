@@ -215,6 +215,8 @@ class CarRacing(gym.Env, EzPickle):
         lap_complete_percent: float = 0.95,
         domain_randomize: bool = False,
         continuous: bool = True,
+        fixed_view: bool = False,
+        show_trajectory: bool = False,
     ):
         EzPickle.__init__(
             self,
@@ -227,6 +229,8 @@ class CarRacing(gym.Env, EzPickle):
         self.continuous = continuous
         self.domain_randomize = domain_randomize
         self.lap_complete_percent = lap_complete_percent
+        self.fixed_view = fixed_view
+        self.show_trajectory = show_trajectory
         self._init_colors()
 
         self.contactListener_keepref = FrictionDetector(self, self.lap_complete_percent)
@@ -532,6 +536,46 @@ class CarRacing(gym.Env, EzPickle):
                 )
         self.car = Car(self.world, *self.track[0][1:4])
 
+        if self.fixed_view:
+            track_x = []
+            track_y = []
+            for _, _, x, y in self.track:
+                track_x.append(x)
+                track_y.append(y)
+
+            track_x = np.array(track_x)
+            track_x_min = track_x.min()
+            track_x_max = track_x.max()
+
+            track_y = np.array(track_y)
+            track_y_min = track_y.min()
+            track_y_max = track_y.max()
+
+            usable_window_w = WINDOW_W
+            indicator_height = WINDOW_H / 8
+            usable_window_h = WINDOW_H - indicator_height
+
+            world_width = track_x_max - track_x_min + 4 * TRACK_WIDTH
+            world_height = track_y_max - track_y_min + 4 * TRACK_WIDTH
+            zoom_x = usable_window_w / world_width
+            zoom_y = usable_window_h / world_height
+            self.fixed_zoom = min(zoom_x, zoom_y)
+
+            center_x = (track_x_min + track_x_max) / 2
+            center_y = (track_y_min + track_y_max) / 2
+            self.fixed_translation = (
+                usable_window_w / 2 - center_x * self.fixed_zoom,
+                usable_window_h / 2 - center_y * self.fixed_zoom + indicator_height,
+            )
+        else:
+            self.fixed_zoom = None
+            self.fixed_translation = None
+
+        if self.show_trajectory:
+            self.trajectory = []
+        else:
+            self.trajectory = None
+
         if self.render_mode == "human":
             self.render()
         return self.step(None)[0], {}
@@ -581,6 +625,11 @@ class CarRacing(gym.Env, EzPickle):
                 info["lap_finished"] = False
                 step_reward = -100
 
+        if self.show_trajectory:
+            coords = (self.car.hull.position[0], self.car.hull.position[1])
+            if len(self.trajectory) == 0 or coords != self.trajectory[-1]:
+                self.trajectory.append(coords)
+
         if self.render_mode == "human":
             self.render()
         return self.state, step_reward, terminated, truncated, info
@@ -613,24 +662,43 @@ class CarRacing(gym.Env, EzPickle):
 
         self.surf = pygame.Surface((WINDOW_W, WINDOW_H))
 
+        is_state_pixels_mode = mode in ["state_pixels", "state_pixels_list"]
+
         assert self.car is not None
-        # computing transformations
-        angle = -self.car.hull.angle
-        # Animating first second zoom.
-        zoom = 0.1 * SCALE * max(1 - self.t, 0) + ZOOM * SCALE * min(self.t, 1)
-        scroll_x = -(self.car.hull.position[0]) * zoom
-        scroll_y = -(self.car.hull.position[1]) * zoom
-        trans = pygame.math.Vector2((scroll_x, scroll_y)).rotate_rad(angle)
-        trans = (WINDOW_W / 2 + trans[0], WINDOW_H / 4 + trans[1])
+        if not is_state_pixels_mode and self.fixed_view:
+            angle = 0.0
+            zoom = self.fixed_zoom
+            trans = self.fixed_translation
+        else:
+            # computing transformations
+            angle = -self.car.hull.angle
+            # Animating first second zoom.
+            zoom = 0.1 * SCALE * max(1 - self.t, 0) + ZOOM * SCALE * min(self.t, 1)
+            scroll_x = -(self.car.hull.position[0]) * zoom
+            scroll_y = -(self.car.hull.position[1]) * zoom
+            trans = pygame.math.Vector2((scroll_x, scroll_y)).rotate_rad(angle)
+            trans = (WINDOW_W / 2 + trans[0], WINDOW_H / 4 + trans[1])
 
         self._render_road(zoom, trans, angle)
-        self.car.draw(
-            self.surf,
-            zoom,
-            trans,
-            angle,
-            mode not in ["state_pixels_list", "state_pixels"],
-        )
+
+        if (
+            not is_state_pixels_mode
+            and self.show_trajectory
+            and len(self.trajectory) >= 2
+        ):
+            poly = []
+            for coords in self.trajectory:
+                coords = pygame.math.Vector2(coords).rotate_rad(angle)
+                poly.append((coords[0] * zoom + trans[0], coords[1] * zoom + trans[1]))
+            pygame.draw.lines(
+                self.surf,
+                color=(255, 0, 0),
+                points=poly,
+                width=2,
+                closed=False,
+            )
+
+        self.car.draw(self.surf, zoom, trans, angle, not is_state_pixels_mode)
 
         self.surf = pygame.transform.flip(self.surf, False, True)
 
