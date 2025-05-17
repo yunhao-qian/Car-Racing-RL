@@ -57,31 +57,31 @@ Each agent is evaluated in both stochastic mode (actions sampled from the policy
 
 **A. Baseline (stochastic mode):** The agent completes the lap but exhibits zig-zag steering behavior.
 
-https://github.com/user-attachments/assets/87e99758-ef4a-4841-afa1-11279ad66edf
+https://github.com/user-attachments/assets/9647bc75-484f-4fae-9bd6-783ef853c0ae
 
 **A. Baseline (deterministic mode):** The car moves abnormally slowly because the MAP action often resolves to "no-op," failing to apply throttle.
 
-https://github.com/user-attachments/assets/3639cbf0-bca5-47e8-9e66-88b13e95b15f
+https://github.com/user-attachments/assets/a68c4987-d86f-4fe1-b742-dd77caac34e7
 
 **B. No Action Repeat (stochastic mode):** The agent completes the lap efficiently, benefiting from high-frequency control and rapid steering adjustments.
 
-https://github.com/user-attachments/assets/f2b2a42b-bb5a-4232-ab40-80034488ecf6
+https://github.com/user-attachments/assets/5f0d4330-b247-4102-a9bf-1f598abe1d36
 
-**C. Domain Randomization (stochastic mode):** Despite visual variation, the agent recovers effectively after sliding off track, demonstrating moderate robustness.
+**C. Domain Randomization (stochastic mode):** Despite randomized visual appearance, the agent’s behavior closely resembles that of the baseline, suggesting the limited impact of domain variation on policy execution.
 
-https://github.com/user-attachments/assets/c59ed0c8-49da-48af-b731-e2f4c36d2364
+https://github.com/user-attachments/assets/754ea369-81c5-4fc9-ba3f-fd4f9fbf30ff
 
-**D. Dirichlet (deterministic mode):** The trajectory is notably smooth, suggesting fine-grained control, though performance remains suboptimal.
+**F. Dirichlet (deterministic mode):** The trajectory is notably smooth, particularly during turns, indicating fine-grained steering control. However, overall speed remains low, limiting episode return.
 
-https://github.com/user-attachments/assets/d40fc8f9-ad48-488d-8a34-562d74ae5299
+https://github.com/user-attachments/assets/d7277912-0d65-46a8-aff0-d90b1f09a537
 
 **G. Multi-Categorical (deterministic mode):** This policy achieves the highest episode return by using an aggressive driving strategy with frequent acceleration and braking.
 
-https://github.com/user-attachments/assets/33cec46d-0ed8-466c-920d-64b087d835e2
+https://github.com/user-attachments/assets/a4affeff-7742-47cc-ba03-2fc1181f1aee
 
 **H. Normal (deterministic mode):** The agent drives at high speeds rarely encountered during training, leading to instability and frequent off-track sliding.
 
-https://github.com/user-attachments/assets/3242a670-405e-4228-8e9c-a88a1b84d788
+https://github.com/user-attachments/assets/224a3f56-fa67-422f-a059-1023e72c214b
 
 ### Performance Overview
 
