@@ -5,11 +5,32 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "car-racing-rl"
 version = "0.1.0"
-dependencies = []
 requires-python = ">= 3.13"
 authors = [{ name = "Yunhao Qian", email = "yunhaoqian@hotmail.com" }]
-description = "Training a reinforcement learning agent to drive in the CarRacing environment from Gymnasium."
+description = "Training agents to drive in CarRacing-v3 using reinforcement learning."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE.txt"]
+dependencies = [
+    "gymnasium[box2d, other]",
+    "numpy",
+    "opencv-python",
+    "pygame",
+    "scipy",
+    "torch",
+    "tqdm",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "captum",
+    "isort",
+    "jupyter",
+    "matplotlib",
+    "pylint",
+    "tensorboard",
+]
 
 [project.urls]
-Repository = "https://github.com/yunhao-qian/ESE-6500-Final-Project"
+Repository = "https://github.com/yunhao-qian/Car-Racing-RL"
