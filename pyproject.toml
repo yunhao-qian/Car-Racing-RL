@@ -32,5 +32,8 @@ dev = [
     "tensorboard",
 ]
 
+[tool.setuptools]
+packages = ["car_racing_rl"]
+
 [project.urls]
 Repository = "https://github.com/yunhao-qian/Car-Racing-RL"

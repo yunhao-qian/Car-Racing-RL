@@ -217,6 +217,7 @@ class CarRacing(gym.Env, EzPickle):
         continuous: bool = True,
         fixed_view: bool = False,
         show_trajectory: bool = False,
+        record_frames: bool = False,
     ):
         EzPickle.__init__(
             self,
@@ -231,6 +232,7 @@ class CarRacing(gym.Env, EzPickle):
         self.lap_complete_percent = lap_complete_percent
         self.fixed_view = fixed_view
         self.show_trajectory = show_trajectory
+        self.record_frames = record_frames
         self._init_colors()
 
         self.contactListener_keepref = FrictionDetector(self, self.lap_complete_percent)
@@ -575,6 +577,10 @@ class CarRacing(gym.Env, EzPickle):
             self.trajectory = []
         else:
             self.trajectory = None
+        if self.record_frames:
+            self.frames = []
+        else:
+            self.frames = None
 
         if self.render_mode == "human":
             self.render()
@@ -629,6 +635,9 @@ class CarRacing(gym.Env, EzPickle):
             coords = (self.car.hull.position[0], self.car.hull.position[1])
             if len(self.trajectory) == 0 or coords != self.trajectory[-1]:
                 self.trajectory.append(coords)
+
+        if self.record_frames:
+            self.frames.append(self._render("rgb_array"))
 
         if self.render_mode == "human":
             self.render()

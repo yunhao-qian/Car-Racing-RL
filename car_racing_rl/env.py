@@ -15,6 +15,7 @@ class EnvConfig(TypedDict, total=False):
     domain_randomize: bool
     fixed_view: bool
     show_trajectory: bool
+    record_frames: bool
     action_interval: int
     frame_stack_size: int
     action_stack_size: int
@@ -50,6 +51,7 @@ class Env(Configurable[EnvConfig]):
             domain_randomize=self._config["domain_randomize"],
             fixed_view=self._config["fixed_view"],
             show_trajectory=self._config["show_trajectory"],
+            record_frames=self._config["record_frames"],
         )
         self._frame_stack: list[np.ndarray] = []
         self._action_stack: list[np.ndarray] = []
@@ -120,12 +122,13 @@ class Env(Configurable[EnvConfig]):
     @override
     def default_config() -> EnvConfig:
         return {
-            "render_mode": None,
             "reward_threshold": 900.0,
             "max_episode_steps": 1000,
+            "render_mode": None,
             "domain_randomize": False,
             "fixed_view": False,
             "show_trajectory": False,
+            "record_frames": False,
             "action_interval": 8,
             "frame_stack_size": 4,
             "action_stack_size": 0,
